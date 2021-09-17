@@ -68,10 +68,6 @@ func (s *SyncCommitteeCache) CurrentPeriodIndexPosition(root [32]byte, valIdx ty
 	if err != nil {
 		return nil, err
 	}
-	if pos == nil {
-		return []types.CommitteeIndex{}, nil
-	}
-
 	return pos.currentPeriod, nil
 }
 
@@ -86,9 +82,6 @@ func (s *SyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx types
 	pos, err := s.idxPositionInCommittee(root, valIdx)
 	if err != nil {
 		return nil, err
-	}
-	if pos == nil {
-		return []types.CommitteeIndex{}, nil
 	}
 	return pos.nextPeriod, nil
 }
@@ -113,7 +106,7 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 	idxInCommittee, ok := item.vIndexToPositionMap[valIdx]
 	if !ok {
 		SyncCommitteeCacheMiss.Inc()
-		return nil, nil
+		return &positionInCommittee{currentPeriod: []types.CommitteeIndex{}, nextPeriod: []types.CommitteeIndex{}}, nil
 	}
 	SyncCommitteeCacheHit.Inc()
 	return idxInCommittee, nil
