@@ -11,12 +11,12 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -36,11 +36,11 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(10))
 	require.NoError(t, state.SetValidators(validators))
-	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+	require.NoError(t, state.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot: 10, // Must be less than block.Slot
 	})))
 
@@ -50,9 +50,9 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	currentEpoch := core.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	pID, err := helpers.BeaconProposerIndex(state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = pID
 	block.Block.Slot = 10
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
@@ -60,7 +60,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 
-	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
@@ -73,8 +73,8 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	require.NoError(t, beaconState.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	require.NoError(t, beaconState.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot: 9,
 	})))
 	require.NoError(t, beaconState.SetSlot(10))
@@ -82,10 +82,10 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	lbhdr, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	require.NoError(t, err)
 
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = 10
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
@@ -109,11 +109,11 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
-	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+	require.NoError(t, state.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot: 9,
 	})))
 
@@ -127,7 +127,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
-	block := testutil.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       1,
 			ParentRoot: lbhsr[:],
@@ -151,7 +151,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
@@ -165,9 +165,9 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	blockSig, err := helpers.ComputeDomainAndSign(state, currentEpoch, &sszBytes, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
-	pID, err := helpers.BeaconProposerIndex(state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
@@ -190,7 +190,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
@@ -207,9 +207,9 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	require.NoError(t, err)
 
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
-	pID, err := helpers.BeaconProposerIndex(state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
@@ -232,11 +232,11 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
-	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+	require.NoError(t, state.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot: 9,
 	})))
 
@@ -246,9 +246,9 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	currentEpoch := core.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	pID, err := helpers.BeaconProposerIndex(state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.ProposerIndex = pID
 	block.Block.Slot = 10
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
@@ -258,7 +258,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	bodyRoot, err := block.Block.Body.HashTreeRoot()
 	require.NoError(t, err, "Failed to hash block bytes got")
 
-	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
@@ -290,11 +290,11 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 		}
 	}
 
-	state, err := testutil.NewBeaconState()
+	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetValidators(validators))
 	require.NoError(t, state.SetSlot(10))
-	require.NoError(t, state.SetLatestBlockHeader(testutil.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+	require.NoError(t, state.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot:          9,
 		ProposerIndex: 0,
 	})))
@@ -305,16 +305,16 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	currentEpoch := core.CurrentEpoch(state)
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	pID, err := helpers.BeaconProposerIndex(state)
+	pID, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	block := testutil.NewBeaconBlock()
+	block := util.NewBeaconBlock()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
 	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
 	block.Block.ParentRoot = latestBlockSignedRoot[:]
 	block.Signature, err = helpers.ComputeDomainAndSign(state, currentEpoch, block.Block, params.BeaconConfig().DomainBeaconProposer, priv)
 	require.NoError(t, err)
-	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()

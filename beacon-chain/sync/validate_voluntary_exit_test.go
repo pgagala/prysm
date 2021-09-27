@@ -22,8 +22,8 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState) {
@@ -99,7 +99,9 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateVoluntaryExit(ctx, "", m)
+	assert.NoError(t, err)
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, true, valid, "Failed validation")
 	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
@@ -132,7 +134,9 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateVoluntaryExit(ctx, "", m)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "passed validation")
 }
 
@@ -161,6 +165,8 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	valid := r.validateVoluntaryExit(ctx, "", m) == pubsub.ValidationAccept
+	res, err := r.validateVoluntaryExit(ctx, "", m)
+	_ = err
+	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Validation should have failed")
 }

@@ -23,10 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil/assert"
-	"github.com/prysmaticlabs/prysm/shared/testutil/require"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
@@ -423,7 +423,8 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ReceivedFrom:  "",
 				ValidatorData: nil,
 			}
-			if got := tt.svc.validateSyncCommitteeMessage(tt.args.ctx, tt.args.pid, msg); got != tt.want {
+			if got, err := tt.svc.validateSyncCommitteeMessage(tt.args.ctx, tt.args.pid, msg); got != tt.want {
+				_ = err
 				t.Errorf("validateSyncCommitteeMessage() = %v, want %v", got, tt.want)
 			}
 		})
@@ -466,7 +467,8 @@ func TestService_ignoreHasSeenSyncMsg(t *testing.T) {
 			s := &Service{}
 			s, _ = tt.setupSvc(s, tt.msg, "")
 			f := s.ignoreHasSeenSyncMsg(tt.msg, tt.committee)
-			result := f(context.Background())
+			result, err := f(context.Background())
+			_ = err
 			require.Equal(t, tt.want, result)
 		})
 	}
@@ -521,7 +523,8 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 			}
 			topic := tt.setupTopic(s)
 			f := s.rejectIncorrectSyncCommittee(tt.committeeIndices, topic)
-			result := f(context.Background())
+			result, err := f(context.Background())
+			_ = err
 			require.Equal(t, tt.want, result)
 		})
 	}
@@ -552,7 +555,8 @@ func Test_ignoreEmptyCommittee(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := ignoreEmptyCommittee(tt.committee)
-			result := f(context.Background())
+			result, err := f(context.Background())
+			_ = err
 			require.Equal(t, tt.want, result)
 		})
 	}
