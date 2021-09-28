@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -63,6 +65,17 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 
 	b := hash.Hash(slotSig)
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
+}
+
+func AssertIsAggregator(committeeCount uint64, slotSig []byte) error {
+	isAggregator, err := IsAggregator(committeeCount, slotSig)
+	if err != nil {
+		return err
+	}
+	if !isAggregator {
+		return status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
+	}
+	return nil
 }
 
 // AggregateSignature returns the aggregated signature of the input attestations.

@@ -90,7 +90,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	data := util.HydrateAttestationData(&ethpb.AttestationData{})
 
 	_, err := validateSelectionIndex(ctx, beaconState, data, 0, sig.Marshal())
-	wanted := "validator is not an aggregator for slot"
+	wanted := "Validator is not an aggregator"
 	assert.ErrorContains(t, wanted, err)
 }
 

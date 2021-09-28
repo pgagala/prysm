@@ -269,12 +269,10 @@ func validateSelectionIndex(
 	if err != nil {
 		return nil, err
 	}
-	aggregator, err := helpers.IsAggregator(uint64(len(committee)), proof)
+
+	err = helpers.AssertIsAggregator(uint64(len(committee)), proof)
 	if err != nil {
 		return nil, err
-	}
-	if !aggregator {
-		return nil, fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
 	domain := params.BeaconConfig().DomainSelectionProof

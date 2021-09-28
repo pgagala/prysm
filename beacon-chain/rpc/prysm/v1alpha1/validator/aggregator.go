@@ -51,13 +51,9 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 		return nil, err
 	}
 
-	// Check if the validator is an aggregator
-	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.SlotSignature)
+	err = helpers.AssertIsAggregator(uint64(len(committee)), req.SlotSignature)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
-	}
-	if !isAggregator {
-		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
+		return nil, err
 	}
 
 	if err := vs.AttPool.AggregateUnaggregatedAttestationsBySlotIndex(ctx, req.Slot, req.CommitteeIndex); err != nil {

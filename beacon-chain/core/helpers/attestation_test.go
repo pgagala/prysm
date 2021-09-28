@@ -45,6 +45,29 @@ func TestAttestation_IsAggregator(t *testing.T) {
 	})
 }
 
+func TestAttestation_AssertIsAggregator(t *testing.T) {
+	t.Run("aggregator", func(t *testing.T) {
+		beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)
+		require.NoError(t, err)
+		sig := privKeys[0].Sign([]byte{'A'})
+		err = helpers.AssertIsAggregator(uint64(len(committee)), sig.Marshal())
+		require.NoError(t, err)
+	})
+
+	t.Run("not aggregator", func(t *testing.T) {
+		params.UseMinimalConfig()
+		defer params.UseMainnetConfig()
+		beaconState, privKeys := util.DeterministicGenesisState(t, 2048)
+
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)
+		require.NoError(t, err)
+		sig := privKeys[0].Sign([]byte{'A'})
+		err = helpers.AssertIsAggregator(uint64(len(committee)), sig.Marshal())
+		require.ErrorContains(t, "Validator is not an aggregator", err)
+	})
+}
+
 func TestAttestation_AggregateSignature(t *testing.T) {
 	t.Run("verified", func(t *testing.T) {
 		pubkeys := make([]bls.PublicKey, 0, 100)
